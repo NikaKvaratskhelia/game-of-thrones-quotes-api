@@ -88,6 +88,10 @@
       "name": "Davos Seaworth",
       "house": null
     },
+    "gared": {
+      "name": "Gared",
+      "house": null
+    },
     "hodor": {
       "name": "Hodor",
       "house": null
@@ -345,6 +349,30 @@
     {
       "character": "davos",
       "sentence": "I may not know the north, but I know men. They're more or less the same in any corner of the world and even the bravest of them don't want to see their wives and children skinned for a lost cause."
+    },
+    {
+      "character": "gared",
+      "sentence": "We should start back. The wildlings are dead."
+    },
+    {
+      "character": "gared",
+      "sentence": "It was the cold. I saw men freeze last winter, and the one before, when I was half a boy."
+    },
+    {
+      "character": "gared",
+      "sentence": "But the real enemy is the cold."
+    },
+    {
+      "character": "gared",
+      "sentence": "It steals up on you quieter than Will, and at first you shiver and your teeth chatter and you stamp your feet and dream of mulled wine and nice hot fires."
+    },
+    {
+      "character": "gared",
+      "sentence": "It burns, it does. Nothing burns like the cold. But only for a while. Then it gets inside you and starts to fill you up, and after a while you don't have the strength to fight it. It's easier just to sit down or go to sleep."
+    },
+    {
+      "character": "gared",
+      "sentence": "They say you don't feel any pain toward the end. First you go weak and drowsy, and everything starts to fade, and then it's like sinking into a sea of warm milk. Peaceful, like."
     },
     {
       "character": "hodor",
