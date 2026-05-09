@@ -675,6 +675,10 @@
       "sentence": "You love your children. It's your one redeeming quality. That and your cheekbones."
     },
     {
+      "character": "tyrion",
+      "sentence": "Every dwarf is a bastard in their father's eyes."
+    },
+    {
       "character": "tywin",
       "sentence": "A lion does not concern himself with the opinion of sheep."
     },
@@ -701,6 +705,10 @@
     {
       "character": "tywin",
       "sentence": "You are being counseled at this very moment."
+    },
+    {
+      "character": "sandor",
+      "sentence": "Seems every bad idea has some Lannister cunt behind it."
     },
     {
       "character": "sandor",
