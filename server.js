@@ -1,10 +1,22 @@
 'use strict';
 
+require('dotenv').config();
 const express = require('express');
+const connectDB = require('./config/db');
 
+// Route files
+const houseRoutes = require('./routes/houseRoutes');
+const characterRoutes = require('./routes/characterRoutes');
+const quoteRoutes = require('./routes/quoteRoutes');
 
-const quotesRepository = require('./quotesRepository');
+// Connect to Database
+connectDB();
+
 const app = express();
+
+// Body parser
+app.use(express.json());
+
 const port = process.env.PORT || 3001;
 
 app.all('*', function(req, res, next) {
@@ -12,28 +24,15 @@ app.all('*', function(req, res, next) {
     next();
 });
 
-app.get('/v1/random/:num?', function(req, res) {
-    res.send(quotesRepository.getRandom(req.params.num || 1));
-});
+// Mount routers
+app.use('/api/houses', houseRoutes);
+app.use('/api/characters', characterRoutes);
+app.use('/api/quotes', quoteRoutes);
 
-app.get('/v1/author/:name/:num?', function(req, res) {
-    res.send(quotesRepository.getByAuthor(req.params.name, req.params.num || 1));
-});
-
-app.get('/v1/houses', function(req, res) {
-    res.send(quotesRepository.getHouses(null));
-});
-
-app.get('/v1/house/:name', function(req, res) {
-    res.send(quotesRepository.getHouses(req.params.name));
-});
-
-app.get('/v1/characters', function(req, res) {
-    res.send(quotesRepository.getCharacters(null));
-});
-
-app.get('/v1/character/:name', function(req, res) {
-    res.send(quotesRepository.getCharacters(req.params.name));
+// Error handler middleware (optional, simple fallback)
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ success: false, error: 'Server Error' });
 });
 
 app.listen(port, function() {

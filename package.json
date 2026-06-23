@@ -25,6 +25,8 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.17.1"
+    "dotenv": "^17.4.2",
+    "express": "^4.17.1",
+    "mongoose": "^9.7.2"
   }
 }
