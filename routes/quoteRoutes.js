@@ -9,7 +9,6 @@ const {
   deleteQuote
 } = require('../controllers/quoteController');
 
-// The order of routes matters here. Static paths must come before /:id
 router.get('/filter', filterQuotes);
 router.get('/random', getRandomQuote);
 

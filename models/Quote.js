@@ -10,6 +10,10 @@ const quoteSchema = new mongoose.Schema({
     type: String,
     ref: 'Character',
     required: true
+  },
+  season: {
+    type: Number,
+    required: false
   }
 }, { timestamps: true });
 

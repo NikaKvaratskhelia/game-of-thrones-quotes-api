@@ -1,7 +1,6 @@
 const House = require('../models/House');
 const Character = require('../models/Character');
 
-// GET /api/houses
 exports.getHouses = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -26,7 +25,6 @@ exports.getHouses = async (req, res) => {
   }
 };
 
-// POST /api/houses
 exports.createHouse = async (req, res) => {
   try {
     const house = await House.create(req.body);
@@ -36,7 +34,6 @@ exports.createHouse = async (req, res) => {
   }
 };
 
-// PUT /api/houses/:id
 exports.updateHouse = async (req, res) => {
   try {
     const house = await House.findByIdAndUpdate(req.params.id, req.body, {
@@ -54,7 +51,6 @@ exports.updateHouse = async (req, res) => {
   }
 };
 
-// DELETE /api/houses/:id
 exports.deleteHouse = async (req, res) => {
   try {
     const house = await House.findById(req.params.id);
@@ -63,9 +59,8 @@ exports.deleteHouse = async (req, res) => {
       return res.status(404).json({ success: false, error: 'House not found' });
     }
 
-    // Set character house to null
     await Character.updateMany({ house: house._id }, { house: null });
-    
+
     await House.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ success: true, data: {} });

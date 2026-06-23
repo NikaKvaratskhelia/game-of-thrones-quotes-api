@@ -1,7 +1,6 @@
 const Character = require('../models/Character');
 const Quote = require('../models/Quote');
 
-// GET /api/characters
 exports.getCharacters = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -29,7 +28,6 @@ exports.getCharacters = async (req, res) => {
   }
 };
 
-// POST /api/characters
 exports.createCharacter = async (req, res) => {
   try {
     const character = await Character.create(req.body);
@@ -39,7 +37,6 @@ exports.createCharacter = async (req, res) => {
   }
 };
 
-// PUT /api/characters/:id
 exports.updateCharacter = async (req, res) => {
   try {
     const character = await Character.findByIdAndUpdate(req.params.id, req.body, {
@@ -57,7 +54,6 @@ exports.updateCharacter = async (req, res) => {
   }
 };
 
-// DELETE /api/characters/:id
 exports.deleteCharacter = async (req, res) => {
   try {
     const character = await Character.findById(req.params.id);
@@ -66,9 +62,8 @@ exports.deleteCharacter = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Character not found' });
     }
 
-    // Cascade delete associated quotes
     await Quote.deleteMany({ character: character._id });
-    
+
     await Character.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ success: true, data: {} });
