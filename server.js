@@ -2,6 +2,7 @@
 
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors'); 
 const connectDB = require('./config/db');
 
 const swaggerUi = require('swagger-ui-express');
@@ -16,17 +17,14 @@ connectDB();
 
 const app = express();
 
-const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'swagger.yaml'));
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(cors());
 
 app.use(express.json());
 
-const port = process.env.PORT || 3001;
+const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'swagger.yaml'));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-app.all('*', function(req, res, next) {
-    res.set('Access-Control-Allow-Origin', '*');
-    next();
-});
+const port = process.env.PORT || 3001;
 
 app.use('/api/houses', houseRoutes);
 app.use('/api/characters', characterRoutes);
