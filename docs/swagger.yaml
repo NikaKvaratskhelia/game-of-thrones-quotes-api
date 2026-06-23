@@ -1,0 +1,353 @@
+openapi: 3.0.0
+info:
+  title: Game of Thrones Quotes API
+  version: 1.0.0
+  description: A comprehensive API for accessing Game of Thrones quotes, characters, and houses.
+
+servers:
+  - url: http://localhost:3001
+    description: Local server
+
+components:
+  schemas:
+    House:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique string identifier (slug)
+        name:
+          type: string
+          description: Full name of the House
+        photo:
+          type: string
+          description: URL to an image of the House sigil
+    HouseInput:
+      type: object
+      required:
+        - _id
+        - name
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        photo:
+          type: string
+    Character:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique string identifier (slug)
+        name:
+          type: string
+          description: Full name of the character
+        house:
+          type: string
+          description: Slug of the House this character belongs to
+        photo:
+          type: string
+          description: URL to an image of the character
+    CharacterInput:
+      type: object
+      required:
+        - _id
+        - name
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        house:
+          type: string
+          description: Slug of the House
+        photo:
+          type: string
+    Quote:
+      type: object
+      properties:
+        _id:
+          type: string
+        sentence:
+          type: string
+          description: The actual spoken quote
+        character:
+          $ref: '#/components/schemas/Character'
+        season:
+          type: integer
+          description: The season number this quote was spoken in
+          nullable: true
+    QuoteInput:
+      type: object
+      required:
+        - sentence
+        - character
+      properties:
+        sentence:
+          type: string
+        character:
+          type: string
+          description: Character Slug
+        season:
+          type: integer
+
+paths:
+  /api/quotes:
+    get:
+      tags:
+        - Quotes
+      summary: Retrieve a paginated list of quotes
+      description: Returns a list of quotes. Can be heavily filtered.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of items per page
+        - in: query
+          name: characterId
+          schema:
+            type: string
+          description: Filter quotes by a specific character (e.g., 'jon', 'cersei')
+        - in: query
+          name: houseId
+          schema:
+            type: string
+          description: Filter quotes by all characters belonging to a specific house (e.g., 'stark', 'lannister')
+        - in: query
+          name: season
+          schema:
+            type: integer
+          description: Filter quotes spoken in a specific season (1-8)
+      responses:
+        '200':
+          description: Successful response with paginated quote data
+    post:
+      tags:
+        - Quotes
+      summary: Create a new quote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        '201':
+          description: Quote created successfully
+
+  /api/quotes/{id}:
+    put:
+      tags:
+        - Quotes
+      summary: Update a quote
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        '200':
+          description: Quote updated successfully
+    delete:
+      tags:
+        - Quotes
+      summary: Delete a quote
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quote deleted successfully
+
+  /api/quotes/filter:
+    get:
+      tags:
+        - Quotes
+      summary: Retrieve a SINGLE random quote matching specific filters
+      description: Returns exactly ONE quote that matches the provided combination of filters (e.g., character AND season).
+      parameters:
+        - in: query
+          name: characterId
+          schema:
+            type: string
+          description: The character who spoke the quote
+        - in: query
+          name: houseId
+          schema:
+            type: string
+          description: The house the speaking character belongs to
+        - in: query
+          name: season
+          schema:
+            type: integer
+          description: The season the quote was spoken in
+      responses:
+        '200':
+          description: A single quote object matching the criteria
+        '404':
+          description: No quotes found matching the given filters
+
+  /api/quotes/random:
+    get:
+      tags:
+        - Quotes
+      summary: Retrieve a random quote
+      description: Returns a single completely random quote from the entire database.
+      responses:
+        '200':
+          description: A random quote
+
+  /api/characters:
+    get:
+      tags:
+        - Characters
+      summary: Retrieve all characters
+      description: Returns a paginated list of all characters.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of characters
+    post:
+      tags:
+        - Characters
+      summary: Create a new character
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterInput'
+      responses:
+        '201':
+          description: Character created successfully
+
+  /api/characters/{id}:
+    put:
+      tags:
+        - Characters
+      summary: Update a character
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterInput'
+      responses:
+        '200':
+          description: Character updated successfully
+    delete:
+      tags:
+        - Characters
+      summary: Delete a character (also cascades to delete all associated quotes)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Character and quotes deleted successfully
+
+  /api/houses:
+    get:
+      tags:
+        - Houses
+      summary: Retrieve all houses
+      description: Returns a paginated list of all houses.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of houses
+    post:
+      tags:
+        - Houses
+      summary: Create a new house
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HouseInput'
+      responses:
+        '201':
+          description: House created successfully
+
+  /api/houses/{id}:
+    put:
+      tags:
+        - Houses
+      summary: Update a house
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HouseInput'
+      responses:
+        '200':
+          description: House updated successfully
+    delete:
+      tags:
+        - Houses
+      summary: Delete a house
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: House deleted successfully

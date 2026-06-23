@@ -4,6 +4,10 @@ require('dotenv').config();
 const express = require('express');
 const connectDB = require('./config/db');
 
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const path = require('path');
+
 const houseRoutes = require('./routes/houseRoutes');
 const characterRoutes = require('./routes/characterRoutes');
 const quoteRoutes = require('./routes/quoteRoutes');
@@ -11,6 +15,9 @@ const quoteRoutes = require('./routes/quoteRoutes');
 connectDB();
 
 const app = express();
+
+const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'swagger.yaml'));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(express.json());
 

@@ -29,6 +29,8 @@
     "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
     "express": "^4.17.1",
-    "mongoose": "^9.7.2"
+    "mongoose": "^9.7.2",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
   }
 }
