@@ -5,8 +5,8 @@ info:
   description: A comprehensive API for accessing Game of Thrones quotes, characters, and houses.
 
 servers:
-  - url: http://localhost:3001
-    description: Local server
+  - url: /
+    description: Current Server
 
 components:
   schemas:
