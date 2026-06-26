@@ -104,7 +104,8 @@ exports.startGame = async (req, res) => {
 
     let popularityFilter = { $eq: 3 };
     if (difficulty === "easy") popularityFilter = { $in: [3, 4, 5] };
-    if (difficulty === "hard") popularityFilter = { $in: [1, 2] };
+    if (difficulty === "medium") popularityFilter = { $in: [2, 3, 4] };
+    if (difficulty === "hard") popularityFilter = { $in: [1, 2, 3] };
 
     const sampledQuotes = await Quote.aggregate([
       { $match: { popularity: popularityFilter } },
@@ -252,7 +253,7 @@ exports.submitAnswer = async (req, res) => {
 exports.usePowerUp = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { sessionId, powerUpType } = req.body; // 'reveal_letter', 'skip_quote', 'buy_heart'
+    const { sessionId, powerUpType } = req.body;
 
     const session = await GameSession.findOne({
       _id: sessionId,
@@ -339,10 +340,10 @@ exports.usePowerUp = async (req, res) => {
     }
 
     if (powerUpType === "skip_quote") {
-      if (user.coins < 15)
+      if (user.coins < 25)
         return res.status(400).json({ message: "Insufficient funds." });
 
-      user.coins -= 15;
+      user.coins -= 25;
       session.currentQuoteIndex += 1;
 
       if (session.currentQuoteIndex >= 10) {
