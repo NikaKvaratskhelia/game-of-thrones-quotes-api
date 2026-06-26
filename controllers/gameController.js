@@ -4,6 +4,9 @@ const User = require("../models/User");
 const levenshtein = require("fast-levenshtein");
 const mongoose = require("mongoose");
 
+const TRAILING_PUNCT_RE = /[.,;:!?'\u2019\u2018"\/#$%\^&\*{}=\-_`~()]+$/;
+const STRIP_FOR_ANSWER_RE = /[^a-zA-Z]/g;
+
 function generateQuoteBlanks(sentence) {
   const words = sentence.split(" ");
   const wordCount = words.length;
@@ -15,14 +18,20 @@ function generateQuoteBlanks(sentence) {
 
   const eligibleIndices = [];
   words.forEach((word, index) => {
-    const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
-    if (cleanWord.length > 2) eligibleIndices.push(index);
+    const alphaOnly = word.replace(STRIP_FOR_ANSWER_RE, "");
+    const hasApostrophe =
+      word.includes("'") || word.includes("\u2019") || word.includes("\u2018");
+    if (!hasApostrophe && alphaOnly.length > 2) {
+      eligibleIndices.push(index);
+    }
   });
 
   const targetPool =
     eligibleIndices.length >= blanksCount
       ? eligibleIndices
-      : words.map((_, i) => i);
+      : words
+          .filter((w) => w.replace(STRIP_FOR_ANSWER_RE, "").length > 0)
+          .map((_, i) => i);
 
   const chosenIndices = [...targetPool]
     .sort(() => 0.5 - Math.random())
@@ -33,14 +42,11 @@ function generateQuoteBlanks(sentence) {
   const blankedWordsArray = [...words];
 
   chosenIndices.forEach((index) => {
-    const cleanAnswer = words[index].replace(
-      /[.,\/#!$%\^&\*;:{}=\-_`~()]/g,
-      "",
-    );
+    const cleanAnswer = words[index].replace(STRIP_FOR_ANSWER_RE, "");
     missingWords.push(cleanAnswer);
-    const punctuation = words[index].match(/[.,\/#!$%\^&\*;:{}=\-_`~()]+$/);
+    const trailingPunct = words[index].match(TRAILING_PUNCT_RE);
     blankedWordsArray[index] =
-      "_".repeat(cleanAnswer.length) + (punctuation ? punctuation[0] : "");
+      "_".repeat(cleanAnswer.length) + (trailingPunct ? trailingPunct[0] : "");
   });
 
   return { blankedText: blankedWordsArray.join(" "), missingWords };
@@ -58,11 +64,11 @@ function evaluateAnswers(userAnswers, correctWords) {
     const userClean = (userAnswers[i] || "")
       .trim()
       .toLowerCase()
-      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
+      .replace(/[^a-z]/g, "");
     const targetClean = correctWords[i]
       .trim()
       .toLowerCase()
-      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
+      .replace(/[^a-z]/g, "");
 
     if (userClean === targetClean) continue;
 
@@ -73,10 +79,8 @@ function evaluateAnswers(userAnswers, correctWords) {
   }
 
   return true;
-  // BUG FIXED: removed duplicate dead chosenIndices.forEach block that was here
 }
 
-// Helper: cast sessionId safely
 function toObjectId(id) {
   try {
     return new mongoose.Types.ObjectId(id);
@@ -113,7 +117,6 @@ exports.startGame = async (req, res) => {
         originalText: q.sentence,
         blankedText,
         missingWords,
-        // Track which char indices have been revealed per blank word
         revealedLetters: missingWords.map(() => ({ charIndices: [] })),
       };
     });
