@@ -153,8 +153,10 @@ exports.googleLogin = async (req, res) => {
     });
   } catch (error) {
     console.error("Google Auth Error:", error);
-    return res
-      .status(400)
-      .json({ message: "Google authentication failed. Token invalid." });
+    return res.status(400).json({
+      message: "Server error during registration.",
+      devError: error.message,
+      devStack: error.stack,
+    });
   }
 };
