@@ -63,7 +63,11 @@ exports.register = async (req, res) => {
     console.error("Registration Error:", error);
     return res
       .status(500)
-      .json({ message: "Server error during registration." });
+      .json({
+        message: "Server error during registration.",
+        devError: error.message,
+        devStack: error.stack,
+      });
   }
 };
 
