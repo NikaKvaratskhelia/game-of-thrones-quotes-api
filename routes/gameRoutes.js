@@ -1,10 +1,16 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { protect } = require('../middleware/auth');
-const { getLevel, claimRewards, spendCoins } = require('../controllers/gameController');
+const {
+  startGame,
+  submitAnswer,
+  usePowerUp,
+  endGame,
+} = require("../controllers/gameController");
+const { protect } = require("../middleware/authMiddleware");
 
-router.get('/level', protect, getLevel);
-router.post('/claim-rewards', protect, claimRewards);
-router.post('/spend-coins', protect, spendCoins);
+router.post("/start", protect, startGame);
+router.post("/answer", protect, submitAnswer);
+router.post("/powerup", protect, usePowerUp);
+router.post("/end", protect, endGame);
 
 module.exports = router;
