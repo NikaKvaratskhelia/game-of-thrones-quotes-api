@@ -16,9 +16,7 @@ function generateQuoteBlanks(sentence) {
   const eligibleIndices = [];
   words.forEach((word, index) => {
     const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
-    if (cleanWord.length > 2) {
-      eligibleIndices.push(index);
-    }
+    if (cleanWord.length > 2) eligibleIndices.push(index);
   });
 
   const targetPool =
@@ -40,13 +38,9 @@ function generateQuoteBlanks(sentence) {
       "",
     );
     missingWords.push(cleanAnswer);
-
     const punctuation = words[index].match(/[.,\/#!$%\^&\*;:{}=\-_`~()]+$/);
-
-    const blankPlaceholder = "_".repeat(cleanAnswer.length);
-
     blankedWordsArray[index] =
-      blankPlaceholder + (punctuation ? punctuation[0] : "");
+      "_".repeat(cleanAnswer.length) + (punctuation ? punctuation[0] : "");
   });
 
   return { blankedText: blankedWordsArray.join(" "), missingWords };
@@ -73,28 +67,22 @@ function evaluateAnswers(userAnswers, correctWords) {
     if (userClean === targetClean) continue;
 
     const distance = levenshtein.get(userClean, targetClean);
-
     if (targetClean.length <= 4 && distance > 0) return false;
     if (targetClean.length <= 7 && distance > 1) return false;
     if (distance > 2) return false;
   }
 
   return true;
+  // BUG FIXED: removed duplicate dead chosenIndices.forEach block that was here
+}
 
-  chosenIndices.forEach((index) => {
-    const cleanAnswer = words[index].replace(
-      /[.,\/#!$%\^&\*;:{}=\-_`~()]/g,
-      "",
-    );
-    missingWords.push(cleanAnswer);
-
-    const punctuation = words[index].match(/[.,\/#!$%\^&\*;:{}=\-_`~()]+$/);
-
-    const blankPlaceholder = "_".repeat(cleanAnswer.length);
-
-    blankedWordsArray[index] =
-      blankPlaceholder + (punctuation ? punctuation[0] : "");
-  });
+// Helper: cast sessionId safely
+function toObjectId(id) {
+  try {
+    return new mongoose.Types.ObjectId(id);
+  } catch {
+    return null;
+  }
 }
 
 exports.startGame = async (req, res) => {
@@ -113,9 +101,9 @@ exports.startGame = async (req, res) => {
     ]);
 
     if (!sampledQuotes || sampledQuotes.length < 10) {
-      return res.status(400).json({
-        message: "Insufficient quotes matching difficulty framework.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Insufficient quotes matching difficulty." });
     }
 
     const sessionQuotes = sampledQuotes.map((q) => {
@@ -125,6 +113,7 @@ exports.startGame = async (req, res) => {
         originalText: q.sentence,
         blankedText,
         missingWords,
+        // Track which char indices have been revealed per blank word
         revealedLetters: missingWords.map(() => ({ charIndices: [] })),
       };
     });
@@ -165,16 +154,19 @@ exports.submitAnswer = async (req, res) => {
     const userId = req.user.id;
     const { sessionId, answers } = req.body;
 
+    const sessionObjId = toObjectId(sessionId);
+    if (!sessionObjId)
+      return res.status(400).json({ message: "Invalid session ID." });
+
     const session = await GameSession.findOne({
-      _id: new mongoose.Types.ObjectId(sessionId),
+      _id: sessionObjId,
       userId,
       status: "active",
     });
-    if (!session) {
+    if (!session)
       return res
         .status(404)
         .json({ message: "Active game session not found." });
-    }
 
     const currentIndex = session.currentQuoteIndex;
     const currentQuote = session.quotes[currentIndex];
@@ -186,13 +178,10 @@ exports.submitAnswer = async (req, res) => {
 
     if (isCorrect) {
       session.combo += 1;
-
       const additionalSteps = Math.floor(session.combo / 3);
       session.multiplier = Math.min(1.0 + additionalSteps * 0.5, 3.0);
-
       coinsEarned = Math.round(10 * session.multiplier);
       xpEarned = 15;
-
       session.coinsEarned += coinsEarned;
       session.xpEarned += xpEarned;
       session.currentQuoteIndex += 1;
@@ -244,9 +233,7 @@ exports.submitAnswer = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    return res
-      .status(500)
-      .json({ message: "Error processing submission validation." });
+    return res.status(500).json({ message: "Error processing submission." });
   }
 };
 
@@ -255,15 +242,19 @@ exports.usePowerUp = async (req, res) => {
     const userId = req.user.id;
     const { sessionId, powerUpType } = req.body;
 
+    const sessionObjId = toObjectId(sessionId);
+    if (!sessionObjId)
+      return res.status(400).json({ message: "Invalid session ID." });
+
     const session = await GameSession.findOne({
-      _id: sessionId,
+      _id: sessionObjId,
       userId,
       status: "active",
     });
     if (!session)
       return res
         .status(404)
-        .json({ message: "Active run frame target missing." });
+        .json({ message: "Active game session not found." });
 
     const user = await User.findById(userId);
     const currentIndex = session.currentQuoteIndex;
@@ -271,7 +262,7 @@ exports.usePowerUp = async (req, res) => {
 
     if (powerUpType === "reveal_letter") {
       if (user.coins < 5)
-        return res.status(400).json({ message: "Insufficient funds." });
+        return res.status(400).json({ message: "Insufficient coins." });
 
       let foundUnrevealed = null;
       for (let wIdx = 0; wIdx < activeQuote.missingWords.length; wIdx++) {
@@ -279,11 +270,12 @@ exports.usePowerUp = async (req, res) => {
         const record = activeQuote.revealedLetters[wIdx];
 
         if (record.charIndices.length < targetWord.length) {
-          const pool = [];
+          const unrevealedPool = [];
           for (let c = 0; c < targetWord.length; c++) {
-            if (!record.charIndices.includes(c)) pool.push(c);
+            if (!record.charIndices.includes(c)) unrevealedPool.push(c);
           }
-          const randomCharIndex = pool[Math.floor(Math.random() * pool.length)];
+          const randomCharIndex =
+            unrevealedPool[Math.floor(Math.random() * unrevealedPool.length)];
           record.charIndices.push(randomCharIndex);
 
           foundUnrevealed = {
@@ -295,53 +287,28 @@ exports.usePowerUp = async (req, res) => {
         }
       }
 
-      if (!foundUnrevealed)
+      if (!foundUnrevealed) {
         return res
           .status(400)
-          .json({ message: "All letters already visible." });
+          .json({ message: "All letters already revealed." });
+      }
 
       user.coins -= 5;
-
-      let totalLettersLeft = 0;
-      for (let wIdx = 0; wIdx < activeQuote.missingWords.length; wIdx++) {
-        const targetWord = activeQuote.missingWords[wIdx];
-        const record = activeQuote.revealedLetters[wIdx];
-        totalLettersLeft += targetWord.length - record.charIndices.length;
-      }
-
-      let nextQuote = null;
-      if (totalLettersLeft === 0) {
-        session.currentQuoteIndex += 1;
-
-        if (session.currentQuoteIndex >= 10) {
-          session.status = "completed";
-        }
-      }
-
       await user.save();
       await session.save();
-
-      if (session.status === "active" && totalLettersLeft === 0) {
-        const nq = session.quotes[session.currentQuoteIndex];
-        nextQuote = {
-          quoteId: nq.quoteId,
-          blankedText: nq.blankedText,
-          blanksNeeded: nq.missingWords.length,
-        };
-      }
 
       return res.status(200).json({
         powerUpType,
         userCoins: user.coins,
         hint: foundUnrevealed,
         status: session.status,
-        nextQuote: nextQuote,
+        nextQuote: null,
       });
     }
 
     if (powerUpType === "skip_quote") {
       if (user.coins < 25)
-        return res.status(400).json({ message: "Insufficient funds." });
+        return res.status(400).json({ message: "Insufficient coins." });
 
       user.coins -= 25;
       session.currentQuoteIndex += 1;
@@ -373,11 +340,9 @@ exports.usePowerUp = async (req, res) => {
 
     if (powerUpType === "buy_heart") {
       if (user.coins < 10)
-        return res.status(400).json({ message: "Insufficient funds." });
+        return res.status(400).json({ message: "Insufficient coins." });
       if (session.hearts >= 3)
-        return res
-          .status(400)
-          .json({ message: "Hearts pool capped already at maximum (3)." });
+        return res.status(400).json({ message: "Already at max hearts." });
 
       user.coins -= 10;
       session.hearts += 1;
@@ -385,19 +350,17 @@ exports.usePowerUp = async (req, res) => {
       await user.save();
       await session.save();
 
-      return res
-        .status(200)
-        .json({ powerUpType, userCoins: user.coins, hearts: session.hearts });
+      return res.status(200).json({
+        powerUpType,
+        userCoins: user.coins,
+        hearts: session.hearts,
+      });
     }
 
-    return res
-      .status(400)
-      .json({ message: "Invalid power-up format profile specified." });
+    return res.status(400).json({ message: "Unknown power-up type." });
   } catch (error) {
     console.error(error);
-    return res
-      .status(500)
-      .json({ message: "Power-up allocation logic crash." });
+    return res.status(500).json({ message: "Power-up error." });
   }
 };
 
@@ -406,11 +369,13 @@ exports.endGame = async (req, res) => {
     const userId = req.user.id;
     const { sessionId } = req.body;
 
-    const session = await GameSession.findOne({ _id: sessionId, userId });
+    const sessionObjId = toObjectId(sessionId);
+    if (!sessionObjId)
+      return res.status(400).json({ message: "Invalid session ID." });
+
+    const session = await GameSession.findOne({ _id: sessionObjId, userId });
     if (!session)
-      return res
-        .status(404)
-        .json({ message: "Session metadata element missed." });
+      return res.status(404).json({ message: "Session not found." });
 
     if (session.status === "active") {
       session.status = "failed";
@@ -444,6 +409,6 @@ exports.endGame = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Session wrap validation failed." });
+    return res.status(500).json({ message: "Session wrap failed." });
   }
 };
