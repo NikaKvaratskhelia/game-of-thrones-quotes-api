@@ -142,6 +142,15 @@ components:
         password:
           type: string
 
+    GoogleLoginRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          description: Google OAuth token from the client
+
     UserPublic:
       type: object
       properties:
@@ -479,6 +488,31 @@ paths:
           description: Invalid credentials
         '500':
           description: Server error during login
+
+  /api/auth/google:
+    post:
+      tags:
+        - Authentication
+      summary: Log in using Google OAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Google login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid or missing token
+        '401':
+          description: Token verification failed
+        '500':
+          description: Server error during Google login
 
   /api/game/start:
     post:
