@@ -1,77 +1,160 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require("../models/User");
+const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 
-const signToken = (userId) => {
+// Initialize Google OAuth Client for token verification
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+/**
+ * Helper: Generate JWT Token for game sessions
+ */
+const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: '7d'
+    expiresIn: "30d", // Long lifespan standard for mobile apps
   });
 };
 
-const register = async (req, res) => {
-  const { username, password } = req.body;
-  const normalizedUsername = typeof username === 'string' ? username.trim() : '';
+/**
+ * @route   POST /api/auth/register
+ * @desc    Register a new user with email and password
+ */
+exports.register = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
 
-  if (!normalizedUsername || normalizedUsername.length < 3 || !password || typeof password !== 'string' || password.length < 6) {
-    return res.status(400).json({
-      success: false,
-      message: 'Username must be at least 3 characters and password must be at least 6 characters.'
+    // 1. Basic validation
+    if (!username || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Please provide username, email, and password." });
+    }
+
+    // 2. Check for existing user (username or email)
+    const userExists = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { username }],
     });
-  }
+    if (userExists) {
+      return res
+        .status(400)
+        .json({ message: "Username or email already exists." });
+    }
 
-  const existingUser = await User.findOne({ username: normalizedUsername });
-  if (existingUser) {
-    return res.status(409).json({ success: false, message: 'Username already in use' });
-  }
+    // 3. Create the user
+    const user = await User.create({
+      username,
+      email: email.toLowerCase(),
+      password,
+    });
 
-  const user = await User.create({ username: normalizedUsername, password });
-  const token = signToken(user._id);
+    const token = generateToken(user._id);
 
-  res.status(201).json({
-    success: true,
-    data: {
+    return res.status(201).json({
       token,
       user: {
         id: user._id,
         username: user.username,
         coins: user.coins,
+        xp: user.xp,
         currentLevel: user.currentLevel,
-        highScore: user.highScore
-      }
-    }
-  });
+        highestStreak: user.highestStreak,
+      },
+    });
+  } catch (error) {
+    console.error("Registration Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error during registration." });
+  }
 };
 
-const login = async (req, res) => {
-  const { username, password } = req.body;
-  const normalizedUsername = typeof username === 'string' ? username.trim() : '';
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  if (!normalizedUsername || !password || typeof password !== 'string') {
-    return res.status(400).json({
-      success: false,
-      message: 'Username and password are required.'
-    });
-  }
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Please provide email and password." });
+    }
 
-  const user = await User.findOne({ username: normalizedUsername }).select('+password');
-  if (!user || !(await user.matchPassword(password))) {
-    return res.status(401).json({ success: false, message: 'Invalid credentials' });
-  }
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+password",
+    );
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials." });
+    }
 
-  const token = signToken(user._id);
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials." });
+    }
 
-  res.status(200).json({
-    success: true,
-    data: {
+    const token = generateToken(user._id);
+
+    return res.status(200).json({
       token,
       user: {
         id: user._id,
         username: user.username,
         coins: user.coins,
+        xp: user.xp,
         currentLevel: user.currentLevel,
-        highScore: user.highScore
-      }
-    }
-  });
+        highestStreak: user.highestStreak,
+      },
+    });
+  } catch (error) {
+    console.error("Login Error:", error);
+    return res.status(500).json({ message: "Server error during login." });
+  }
 };
 
-module.exports = { register, login };
+exports.googleLogin = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ message: "Google ID Token is required." });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, sub: googleId } = payload;
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      const fallbackUsername =
+        name.replace(/\s+/g, "").toLowerCase() + googleId.slice(-4);
+
+      user = await User.create({
+        username: fallbackUsername,
+        email: email.toLowerCase(),
+        password: Math.random().toString(36).slice(-8) + googleId.slice(-6),
+        coins: 50,
+      });
+    }
+
+    const token = generateToken(user._id);
+
+    return res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        coins: user.coins,
+        xp: user.xp,
+        currentLevel: user.currentLevel,
+        highestStreak: user.highestStreak,
+      },
+    });
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    return res
+      .status(400)
+      .json({ message: "Google authentication failed. Token invalid." });
+  }
+};

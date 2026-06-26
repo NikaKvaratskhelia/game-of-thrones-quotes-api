@@ -33,38 +33,3 @@ exports.createHouse = async (req, res) => {
     res.status(400).json({ success: false, error: error.message });
   }
 };
-
-exports.updateHouse = async (req, res) => {
-  try {
-    const house = await House.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
-
-    if (!house) {
-      return res.status(404).json({ success: false, error: 'House not found' });
-    }
-
-    res.status(200).json({ success: true, data: house });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-exports.deleteHouse = async (req, res) => {
-  try {
-    const house = await House.findById(req.params.id);
-
-    if (!house) {
-      return res.status(404).json({ success: false, error: 'House not found' });
-    }
-
-    await Character.updateMany({ house: house._id }, { house: null });
-
-    await House.findByIdAndDelete(req.params.id);
-
-    res.status(200).json({ success: true, data: {} });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
