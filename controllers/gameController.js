@@ -83,7 +83,7 @@ exports.startGame = async (req, res) => {
     const { difficulty } = req.body;
 
     let popularityFilter = { $eq: 3 };
-    if (difficulty === "easy") popularityFilter = { $in: [4, 5] };
+    if (difficulty === "easy") popularityFilter = { $in: [3, 4, 5] };
     if (difficulty === "hard") popularityFilter = { $in: [1, 2] };
 
     const sampledQuotes = await Quote.aggregate([

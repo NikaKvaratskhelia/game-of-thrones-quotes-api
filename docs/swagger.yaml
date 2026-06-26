@@ -2,68 +2,57 @@ openapi: 3.0.0
 info:
   title: Game of Thrones Quotes API
   version: 1.0.0
-  description: A comprehensive API for accessing Game of Thrones quotes, characters, and houses.
+  description: API documentation for the current Game of Thrones quotes, characters, houses, authentication, and game routes.
 
 servers:
   - url: /
-    description: Current Server
+    description: Current server
+
+tags:
+  - name: Quotes
+    description: Quote listing, filtering, creation, update, and deletion
+  - name: Characters
+    description: Character listing
+  - name: Houses
+    description: House listing
+  - name: Authentication
+    description: User registration and login
+  - name: Game
+    description: Protected game session endpoints
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     House:
       type: object
       properties:
         _id:
           type: string
-          description: Unique string identifier (slug)
-        name:
-          type: string
-          description: Full name of the House
-        photo:
-          type: string
-          description: URL to an image of the House sigil
-    HouseInput:
-      type: object
-      required:
-        - _id
-        - name
-      properties:
-        _id:
-          type: string
         name:
           type: string
         photo:
           type: string
+
     Character:
       type: object
       properties:
         _id:
           type: string
-          description: Unique string identifier (slug)
-        name:
-          type: string
-          description: Full name of the character
-        house:
-          type: string
-          description: Slug of the House this character belongs to
-        photo:
-          type: string
-          description: URL to an image of the character
-    CharacterInput:
-      type: object
-      required:
-        - _id
-        - name
-      properties:
-        _id:
-          type: string
         name:
           type: string
         house:
-          type: string
-          description: Slug of the House
+          oneOf:
+            - type: string
+              nullable: true
+            - $ref: '#/components/schemas/House'
         photo:
           type: string
+
     Quote:
       type: object
       properties:
@@ -71,13 +60,22 @@ components:
           type: string
         sentence:
           type: string
-          description: The actual spoken quote
         character:
           $ref: '#/components/schemas/Character'
         season:
           type: integer
-          description: The season number this quote was spoken in
           nullable: true
+        popularity:
+          type: integer
+          minimum: 1
+          maximum: 5
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     QuoteInput:
       type: object
       required:
@@ -88,9 +86,62 @@ components:
           type: string
         character:
           type: string
-          description: Character Slug
+          description: Character ID/slug
         season:
           type: integer
+        popularity:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    PaginatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        count:
+          type: integer
+        pagination:
+          type: object
+          properties:
+            totalItems:
+              type: integer
+            currentPage:
+              type: integer
+            totalPages:
+              type: integer
+        data:
+          type: array
+          items:
+            type: object
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
     UserPublic:
       type: object
       properties:
@@ -100,178 +151,108 @@ components:
           type: string
         coins:
           type: integer
+        xp:
+          type: integer
         currentLevel:
           type: integer
-        highScore:
+        highestStreak:
           type: integer
-    AuthRequest:
-      type: object
-      required:
-        - username
-        - password
-      properties:
-        username:
-          type: string
-        password:
-          type: string
+
     AuthResponse:
       type: object
       properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            token:
-              type: string
-            user:
-              $ref: '#/components/schemas/UserPublic'
-    GameChoice:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserPublic'
+
+    StartGameRequest:
       type: object
       properties:
-        id:
+        difficulty:
           type: string
-        name:
-          type: string
-        correct:
-          type: boolean
-    LevelQuote:
-      type: object
-      properties:
-        quoteId:
-          type: string
-        sentence:
-          type: string
-        season:
-          type: integer
-          nullable: true
-        popularity:
-          type: integer
-          description: Popularity rating from 1 (background) to 5 (iconic quote)
-        correctCharacter:
-          type: object
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            house:
-              type: string
-              nullable: true
-        gameChoices:
-          type: array
-          items:
-            $ref: '#/components/schemas/GameChoice'
-    LevelResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            level:
-              type: integer
-            difficulty:
-              type: string
-              enum:
-                - easy
-                - medium
-                - hard
-            quotes:
-              type: array
-              items:
-                $ref: '#/components/schemas/LevelQuote'
-    ClaimRewardsRequest:
+          enum:
+            - easy
+            - medium
+            - hard
+
+    SubmitAnswerRequest:
       type: object
       required:
-        - coinsEarned
-        - clearedQuoteIds
+        - sessionId
+        - answers
       properties:
-        coinsEarned:
-          type: integer
-          minimum: 0
-        clearedQuoteIds:
+        sessionId:
+          type: string
+        answers:
           type: array
           items:
             type: string
-    SpendCoinsRequest:
+
+    PowerUpRequest:
       type: object
       required:
-        - action
+        - sessionId
+        - powerUpType
       properties:
-        action:
+        sessionId:
+          type: string
+        powerUpType:
           type: string
           enum:
             - reveal_letter
-            - buy_life
             - skip_quote
-    WalletResponse:
+            - buy_heart
+
+    EndGameRequest:
       type: object
+      required:
+        - sessionId
       properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            coins:
-              type: integer
-            currentLevel:
-              type: integer
-            highScore:
-              type: integer
-            action:
-              type: string
-            spent:
-              type: integer
-    securitySchemes:
-      bearerAuth:
-        type: http
-        scheme: bearer
-        bearerFormat: JWT
+        sessionId:
+          type: string
 
 paths:
   /api/quotes:
     get:
       tags:
         - Quotes
-      summary: Retrieve a paginated list of quotes
-      description: Returns a list of quotes. Can be heavily filtered.
+      summary: List quotes
+      description: Returns a paginated list of quotes. Supports filtering by character, house, and season.
       parameters:
         - in: query
           name: page
           schema:
             type: integer
             default: 1
-          description: Page number for pagination
         - in: query
           name: limit
           schema:
             type: integer
             default: 10
-          description: Number of items per page
         - in: query
           name: characterId
           schema:
             type: string
-          description: Filter quotes by a specific character (e.g., 'jon', 'cersei')
         - in: query
           name: houseId
           schema:
             type: string
-          description: Filter quotes by all characters belonging to a specific house (e.g., 'stark', 'lannister')
         - in: query
           name: season
           schema:
             type: integer
-          description: Filter quotes spoken in a specific season (1-8)
       responses:
         '200':
-          description: Successful response with paginated quote data
+          description: Paginated quote list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
     post:
       tags:
         - Quotes
-      summary: Create a new quote
+      summary: Create a quote
       requestBody:
         required: true
         content:
@@ -281,6 +262,15 @@ paths:
       responses:
         '201':
           description: Quote created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Quote'
 
   /api/quotes/{id}:
     put:
@@ -302,6 +292,17 @@ paths:
       responses:
         '200':
           description: Quote updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Quote'
+        '404':
+          description: Quote not found
     delete:
       tags:
         - Quotes
@@ -315,51 +316,78 @@ paths:
       responses:
         '200':
           description: Quote deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '404':
+          description: Quote not found
 
   /api/quotes/filter:
     get:
       tags:
         - Quotes
-      summary: Retrieve a SINGLE random quote matching specific filters
-      description: Returns exactly ONE quote that matches the provided combination of filters (e.g., character AND season).
+      summary: Get one random quote matching filters
+      description: Returns a single quote selected randomly from the filtered set.
       parameters:
         - in: query
           name: characterId
           schema:
             type: string
-          description: The character who spoke the quote
         - in: query
           name: houseId
           schema:
             type: string
-          description: The house the speaking character belongs to
         - in: query
           name: season
           schema:
             type: integer
-          description: The season the quote was spoken in
       responses:
         '200':
-          description: A single quote object matching the criteria
+          description: Matching quote returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Quote'
         '404':
-          description: No quotes found matching the given filters
+          description: No quotes found
 
   /api/quotes/random:
     get:
       tags:
         - Quotes
-      summary: Retrieve a random quote
-      description: Returns a single completely random quote from the entire database.
+      summary: Get a completely random quote
       responses:
         '200':
-          description: A random quote
+          description: Random quote returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Quote'
+        '404':
+          description: No quotes found
 
   /api/characters:
     get:
       tags:
         - Characters
-      summary: Retrieve all characters
-      description: Returns a paginated list of all characters.
+      summary: List characters
+      description: Returns a paginated list of characters with populated house data.
       parameters:
         - in: query
           name: page
@@ -373,61 +401,18 @@ paths:
             default: 10
       responses:
         '200':
-          description: List of characters
-    post:
-      tags:
-        - Characters
-      summary: Create a new character
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CharacterInput'
-      responses:
-        '201':
-          description: Character created successfully
-
-  /api/characters/{id}:
-    put:
-      tags:
-        - Characters
-      summary: Update a character
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CharacterInput'
-      responses:
-        '200':
-          description: Character updated successfully
-    delete:
-      tags:
-        - Characters
-      summary: Delete a character (also cascades to delete all associated quotes)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Character and quotes deleted successfully
+          description: Paginated character list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
 
   /api/houses:
     get:
       tags:
         - Houses
-      summary: Retrieve all houses
-      description: Returns a paginated list of all houses.
+      summary: List houses
+      description: Returns a paginated list of houses.
       parameters:
         - in: query
           name: page
@@ -441,66 +426,23 @@ paths:
             default: 10
       responses:
         '200':
-          description: List of houses
-    post:
-      tags:
-        - Houses
-      summary: Create a new house
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/HouseInput'
-      responses:
-        '201':
-          description: House created successfully
-
-  /api/houses/{id}:
-    put:
-      tags:
-        - Houses
-      summary: Update a house
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/HouseInput'
-      responses:
-        '200':
-          description: House updated successfully
-    delete:
-      tags:
-        - Houses
-      summary: Delete a house
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: House deleted successfully
+          description: Paginated house list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
 
   /api/auth/register:
     post:
       tags:
         - Authentication
-      summary: Register a new player profile
+      summary: Register a new user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthRequest'
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
         '201':
           description: User registered successfully
@@ -509,21 +451,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Validation error
-        '409':
-          description: Username already in use
+          description: Validation or duplicate-user error
+        '500':
+          description: Server error during registration
 
   /api/auth/login:
     post:
       tags:
         - Authentication
-      summary: Authenticate an existing player
+      summary: Log in an existing user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthRequest'
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
           description: Login successful
@@ -532,45 +474,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Validation error
+          description: Missing credentials
         '401':
           description: Invalid credentials
+        '500':
+          description: Server error during login
 
-  /api/game/level:
-    get:
-      tags:
-        - Game
-      summary: Fetch the current level payload for the authenticated player
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: difficulty
-          schema:
-            type: string
-            enum:
-              - easy
-              - medium
-              - hard
-            default: medium
-          description: Choose the level difficulty. Hard requires at least 4 quotes with popularity 3.
-      responses:
-        '200':
-          description: Level loaded successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LevelResponse'
-        '400':
-          description: Not enough unplayed quotes available
-        '401':
-          description: Authentication required
-
-  /api/game/claim-rewards:
+  /api/game/start:
     post:
       tags:
         - Game
-      summary: Claim rewards and progress to the next level
+      summary: Start a new game session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartGameRequest'
+      responses:
+        '201':
+          description: Game session started
+        '400':
+          description: Not enough quotes available for the requested difficulty
+        '401':
+          description: Authentication required
+
+  /api/game/answer:
+    post:
+      tags:
+        - Game
+      summary: Submit answers for the current quote
       security:
         - bearerAuth: []
       requestBody:
@@ -578,24 +513,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClaimRewardsRequest'
+              $ref: '#/components/schemas/SubmitAnswerRequest'
       responses:
         '200':
-          description: Rewards claimed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WalletResponse'
-        '400':
-          description: Invalid rewards payload
+          description: Answer processed
+        '404':
+          description: Active game session not found
         '401':
           description: Authentication required
 
-  /api/game/spend-coins:
+  /api/game/powerup:
     post:
       tags:
         - Game
-      summary: Spend coins for an in-game action
+      summary: Use a power-up during an active session
       security:
         - bearerAuth: []
       requestBody:
@@ -603,15 +534,34 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SpendCoinsRequest'
+              $ref: '#/components/schemas/PowerUpRequest'
       responses:
         '200':
-          description: Coins spent successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WalletResponse'
+          description: Power-up applied
         '400':
-          description: Invalid action or insufficient coins
+          description: Insufficient funds or invalid power-up
+        '404':
+          description: Active game session not found
+        '401':
+          description: Authentication required
+
+  /api/game/end:
+    post:
+      tags:
+        - Game
+      summary: End the current game session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EndGameRequest'
+      responses:
+        '200':
+          description: Game session ended
+        '404':
+          description: Session not found
         '401':
           description: Authentication required
