@@ -2,34 +2,24 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 
-// Initialize Google OAuth Client for token verification
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-/**
- * Helper: Generate JWT Token for game sessions
- */
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: "30d", // Long lifespan standard for mobile apps
+    expiresIn: "30d", 
   });
 };
 
-/**
- * @route   POST /api/auth/register
- * @desc    Register a new user with email and password
- */
 exports.register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // 1. Basic validation
     if (!username || !email || !password) {
       return res
         .status(400)
         .json({ message: "Please provide username, email, and password." });
     }
 
-    // 2. Check for existing user (username or email)
     const userExists = await User.findOne({
       $or: [{ email: email.toLowerCase() }, { username }],
     });
@@ -39,7 +29,6 @@ exports.register = async (req, res) => {
         .json({ message: "Username or email already exists." });
     }
 
-    // 3. Create the user
     const user = await User.create({
       username,
       email: email.toLowerCase(),
