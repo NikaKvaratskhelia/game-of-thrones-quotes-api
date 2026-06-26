@@ -6,7 +6,7 @@ const {
   usePowerUp,
   endGame,
 } = require("../controllers/gameController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/auth");
 
 router.post("/start", protect, startGame);
 router.post("/answer", protect, submitAnswer);
