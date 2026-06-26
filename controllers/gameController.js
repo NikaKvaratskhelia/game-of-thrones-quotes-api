@@ -41,7 +41,11 @@ function generateQuoteBlanks(sentence) {
     missingWords.push(cleanAnswer);
 
     const punctuation = words[index].match(/[.,\/#!$%\^&\*;:{}=\-_`~()]+$/);
-    blankedWordsArray[index] = "_____" + (punctuation ? punctuation[0] : "");
+
+    const blankPlaceholder = "_".repeat(cleanAnswer.length);
+
+    blankedWordsArray[index] =
+      blankPlaceholder + (punctuation ? punctuation[0] : "");
   });
 
   return { blankedText: blankedWordsArray.join(" "), missingWords };
@@ -75,6 +79,21 @@ function evaluateAnswers(userAnswers, correctWords) {
   }
 
   return true;
+
+  chosenIndices.forEach((index) => {
+    const cleanAnswer = words[index].replace(
+      /[.,\/#!$%\^&\*;:{}=\-_`~()]/g,
+      "",
+    );
+    missingWords.push(cleanAnswer);
+
+    const punctuation = words[index].match(/[.,\/#!$%\^&\*;:{}=\-_`~()]+$/);
+
+    const blankPlaceholder = "_".repeat(cleanAnswer.length);
+
+    blankedWordsArray[index] =
+      blankPlaceholder + (punctuation ? punctuation[0] : "");
+  });
 }
 
 exports.startGame = async (req, res) => {
@@ -92,11 +111,9 @@ exports.startGame = async (req, res) => {
     ]);
 
     if (!sampledQuotes || sampledQuotes.length < 10) {
-      return res
-        .status(400)
-        .json({
-          message: "Insufficient quotes matching difficulty framework.",
-        });
+      return res.status(400).json({
+        message: "Insufficient quotes matching difficulty framework.",
+      });
     }
 
     const sessionQuotes = sampledQuotes.map((q) => {
@@ -316,7 +333,7 @@ exports.usePowerUp = async (req, res) => {
         userCoins: user.coins,
         hint: foundUnrevealed,
         status: session.status,
-        nextQuote: nextQuote, 
+        nextQuote: nextQuote,
       });
     }
 
@@ -344,14 +361,12 @@ exports.usePowerUp = async (req, res) => {
         };
       }
 
-      return res
-        .status(200)
-        .json({
-          powerUpType,
-          userCoins: user.coins,
-          status: session.status,
-          nextQuote,
-        });
+      return res.status(200).json({
+        powerUpType,
+        userCoins: user.coins,
+        status: session.status,
+        nextQuote,
+      });
     }
 
     if (powerUpType === "buy_heart") {
