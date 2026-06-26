@@ -2,6 +2,7 @@ const Quote = require("../models/Quote");
 const GameSession = require("../models/GameSession");
 const User = require("../models/User");
 const levenshtein = require("fast-levenshtein");
+const mongoose = require("mongoose");
 
 function generateQuoteBlanks(sentence) {
   const words = sentence.split(" ");
@@ -164,7 +165,7 @@ exports.submitAnswer = async (req, res) => {
     const { sessionId, answers } = req.body;
 
     const session = await GameSession.findOne({
-      _id: sessionId,
+      _id: new mongoose.Types.ObjectId(sessionId),
       userId,
       status: "active",
     });
