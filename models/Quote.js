@@ -14,6 +14,12 @@ const quoteSchema = new mongoose.Schema({
   season: {
     type: Number,
     required: false
+  },
+  popularity: {
+    type: Number,
+    default: 3,
+    min: 1,
+    max: 5
   }
 }, { timestamps: true });
 

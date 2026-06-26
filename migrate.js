@@ -42,7 +42,8 @@ const migrateData = async () => {
       return Quote.create({
         sentence: quote.sentence,
         character: quote.character,
-        season: quote.season || null
+        season: quote.season || null,
+        popularity: quote.popularity || 3
       });
     });
     await Promise.all(quotePromises);

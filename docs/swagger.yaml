@@ -91,6 +91,144 @@ components:
           description: Character Slug
         season:
           type: integer
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        coins:
+          type: integer
+        currentLevel:
+          type: integer
+        highScore:
+          type: integer
+    AuthRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: '#/components/schemas/UserPublic'
+    GameChoice:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        correct:
+          type: boolean
+    LevelQuote:
+      type: object
+      properties:
+        quoteId:
+          type: string
+        sentence:
+          type: string
+        season:
+          type: integer
+          nullable: true
+        popularity:
+          type: integer
+          description: Popularity rating from 1 (background) to 5 (iconic quote)
+        correctCharacter:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            house:
+              type: string
+              nullable: true
+        gameChoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/GameChoice'
+    LevelResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            level:
+              type: integer
+            difficulty:
+              type: string
+              enum:
+                - easy
+                - medium
+                - hard
+            quotes:
+              type: array
+              items:
+                $ref: '#/components/schemas/LevelQuote'
+    ClaimRewardsRequest:
+      type: object
+      required:
+        - coinsEarned
+        - clearedQuoteIds
+      properties:
+        coinsEarned:
+          type: integer
+          minimum: 0
+        clearedQuoteIds:
+          type: array
+          items:
+            type: string
+    SpendCoinsRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - reveal_letter
+            - buy_life
+            - skip_quote
+    WalletResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            coins:
+              type: integer
+            currentLevel:
+              type: integer
+            highScore:
+              type: integer
+            action:
+              type: string
+            spent:
+              type: integer
+    securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
 
 paths:
   /api/quotes:
@@ -351,3 +489,129 @@ paths:
       responses:
         '200':
           description: House deleted successfully
+
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new player profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+        '409':
+          description: Username already in use
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate an existing player
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+        '401':
+          description: Invalid credentials
+
+  /api/game/level:
+    get:
+      tags:
+        - Game
+      summary: Fetch the current level payload for the authenticated player
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: difficulty
+          schema:
+            type: string
+            enum:
+              - easy
+              - medium
+              - hard
+            default: medium
+          description: Choose the level difficulty. Hard requires at least 4 quotes with popularity 3.
+      responses:
+        '200':
+          description: Level loaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LevelResponse'
+        '400':
+          description: Not enough unplayed quotes available
+        '401':
+          description: Authentication required
+
+  /api/game/claim-rewards:
+    post:
+      tags:
+        - Game
+      summary: Claim rewards and progress to the next level
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimRewardsRequest'
+      responses:
+        '200':
+          description: Rewards claimed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+        '400':
+          description: Invalid rewards payload
+        '401':
+          description: Authentication required
+
+  /api/game/spend-coins:
+    post:
+      tags:
+        - Game
+      summary: Spend coins for an in-game action
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpendCoinsRequest'
+      responses:
+        '200':
+          description: Coins spent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+        '400':
+          description: Invalid action or insufficient coins
+        '401':
+          description: Authentication required

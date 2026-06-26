@@ -12,6 +12,8 @@ const path = require("path");
 const houseRoutes = require("./routes/houseRoutes");
 const characterRoutes = require("./routes/characterRoutes");
 const quoteRoutes = require("./routes/quoteRoutes");
+const authRoutes = require("./routes/authRoutes");
+const gameRoutes = require("./routes/gameRoutes");
 
 connectDB();
 
@@ -34,6 +36,8 @@ const port = process.env.PORT || 3001;
 app.use("/api/houses", houseRoutes);
 app.use("/api/characters", characterRoutes);
 app.use("/api/quotes", quoteRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/game", gameRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
